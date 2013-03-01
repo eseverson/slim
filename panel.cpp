@@ -240,6 +240,9 @@ unsigned long Panel::GetColor(const char* colorname) {
 }
 
 void Panel::Cursor(int visible) {
+	if(cfg->getOption("input_hidecursor") == "true") {
+		return;
+	}
 	const char* text;
 	int xx, yy, y2, cheight;
 	const char* txth = "Wj"; /* used to get cursor height */
@@ -263,7 +266,11 @@ void Panel::Cursor(int visible) {
 	cheight = extents.height;
 	y2 = yy - extents.y + extents.height;
 	XftTextExtents8(Dpy, font, (XftChar8*)text, strlen(text), &extents);
-	xx += extents.width;
+	if(cfg->getOption("input_center_text") == "true") {
+		xx += extents.width / 2;
+	}else {
+		xx += extents.width;
+	}
 
 	if(visible == SHOW) {
 		XSetForeground(Dpy, TextGC,
@@ -476,12 +483,26 @@ bool Panel::OnKeyPress(XEvent& event) {
 						formerString.length(), &extents);
 		int maxLength = extents.width;
 
-		XClearArea(Dpy, Win, xx-3, yy-maxHeight-3,
+		int centeringOffset = 0;
+		if(cfg->getOption("input_center_text") == "true"){
+			centeringOffset = maxLength/2;
+		}
+
+
+		XClearArea(Dpy, Win, xx-3-centeringOffset, yy-maxHeight-3,
 				   maxLength+6, maxHeight+6, false);
 	}
 
 	if (!text.empty()) {
-		SlimDrawString8 (draw, &inputcolor, font, xx, yy,
+		int centeringOffset = 0;
+		if(cfg->getOption("input_center_text") == "true"){
+			XftTextExtents8(Dpy, font, reinterpret_cast<const XftChar8*>(text.c_str()),
+							text.length(), &extents);
+			int maxLength = extents.width;
+			centeringOffset = maxLength/2;
+		}
+
+		SlimDrawString8 (draw, &inputcolor, font, xx-centeringOffset, yy,
 						 text,
 						 &inputshadowcolor,
 						 inputShadowXOffset, inputShadowYOffset);
